@@ -13,12 +13,12 @@ def read_file(io, sha)
   end 
 end
 
+sha = ARGV[0]
+output_file = ARGV[1]
+print 'extracting ', sha, ' into ', output_file, '\n'
+
 io = FileIOService.new
-
-sha = ARGV.pop
-output_file = ARGV.pop
-
-File.open( ouput_file, 'w' ) do |output|
+File.open( output_file, 'w' ) do |output|
   read_file(io, sha){ |i| output.write(i) }
 end
 
