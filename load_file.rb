@@ -1,20 +1,24 @@
 require 'openssl'
+require_relative 'ioservice'
 
-ChunkSize=50
-StoreDir = 'store'
+ReadSize=50
 
-def chunk_dirname(sha1)
-  StoreDir + '/' + sha1[0...2]
+def read_file(io, sha)
+  io.read_elem(:file, sha) do |file|
+    file.each_line do |line|
+      io.read_elem(:chunk, line.strip) do |chunk_file|
+        chunk_file.each(ReadSize) {|buf| yield buf}
+      end
+    end
+  end 
 end
 
-def chunk_filename(sha1)
-  chunk_dirname( sha1 ) + '/' + sha1[2..-1]
+io = FileIOService.new
+
+sha = ARGV.pop
+output_file = ARGV.pop
+
+File.open( ouput_file, 'w' ) do |output|
+  read_file(io, sha){ |i| output.write(i) }
 end
 
-def read_file(sha)
-  File.open( chunk_filename(sha) ).each_line do |line|
-    File.open( chunk_filename(line.strip) ).each_line {|l| print l}
-  end
-end
-
-puts read_file(ARGV.pop)

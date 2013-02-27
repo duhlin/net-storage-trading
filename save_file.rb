@@ -1,64 +1,58 @@
 require 'openssl'
+require_relative 'ioservice'
 
 ChunkSize=50
-StoreDir = 'store'
 
-def chunk_dirname(sha1)
-  StoreDir + '/' + sha1[0...2]
-end
-
-def chunk_filename(sha1)
-  chunk_dirname( sha1 ) + '/' + sha1[2..-1]
-end
-
-def write_elem(digest, content)
-  if not Dir.exists? chunk_dirname(digest) 
-    Dir.mkdir( chunk_dirname(digest) )
+class SplitAndWriteChunks
+  def initialize(ioservice)
+    #@file_sha1 = Digest::SHA1.new
+    #@content = []
+    @io = ioservice
   end
-  File.open( chunk_filename(digest), 'w' ) do |file|
-    file.write(content)
-  end
-end
 
-def write_chunk( content )
-  sha1 = Digest::SHA1.new
-  digest = sha1.hexdigest( content )
-  write_elem( digest, content )
-  digest
-end
+  def save_file(file)
+    @content = []
+    @file_sha1 = Digest::SHA1.new
+    buffer = ''
+    rolling_sha1 = Digest::SHA1.new
 
-def write_file(file)
-  buffer = ''
-  last_index = 0
-
-  content = []
-  file_sha1 = Digest::SHA1.new
-  rolling_sha1 = Digest::SHA1.new
-  file.each_byte do |byte|
-    buffer << byte
-    head = buffer[0...-ChunkSize]
-    tail = buffer[-ChunkSize..-1] || buffer
-    tail_digest = rolling_sha1.hexdigest( tail )
-    if File.exists? chunk_filename( tail_digest )
-      if not head.empty?
-        file_sha1 << head
-        content.push( write_chunk( head ) )
+    #iterate over file content
+    file.each_byte do |byte|
+      buffer << byte
+      head = buffer[0...-ChunkSize]
+      tail = buffer[-ChunkSize..-1] || buffer
+      tail_digest = rolling_sha1.hexdigest( tail )
+      if @io.exists? :chunk, tail_digest
+        if not head.empty?
+          handle_chunk( head )
+        end
+        handle_chunk( tail )
+        buffer = ''
+      elsif head.size == ChunkSize
+        handle_chunk( head )
+        buffer = tail
       end
-      file_sha1 << tail
-      content.push( tail_digest )
-      buffer = ''
-    elsif head.size == ChunkSize
-      file_sha1 << head
-      content.push( write_chunk( head ) )
-      buffer = tail
     end
+    if not buffer.empty?
+      handle_chunk( buffer )
+    end
+    handle_file
+    @file_sha1.hexdigest
   end
-  if not buffer.empty?
-    file_sha1 << buffer
-    content.push( write_chunk( buffer ) )
+private
+  def handle_file
+    @io.write_elem( :file, @file_sha1.hexdigest, @content.join("\n")+"\n" )
   end
-  write_elem( file_sha1.hexdigest, content.join("\n")+"\n" )
-  file_sha1.hexdigest
+
+  def handle_chunk( content )
+    @file_sha1 << content
+    sha1 = Digest::SHA1.new
+    digest = sha1.hexdigest( content )
+    @content.push( digest )
+    @io.write_elem( :chunk, digest, content )
+  end
 end
 
-puts write_file(ARGF)
+s = SplitAndWriteChunks.new( FileIOService.new )
+puts s.save_file( ARGF ) 
+
