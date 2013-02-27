@@ -1,7 +1,7 @@
 require 'openssl'
 require_relative 'ioservice'
 
-ChunkSize=50
+ChunkSize=1024*256
 
 class SplitAndWriteChunks
   def initialize(ioservice)
