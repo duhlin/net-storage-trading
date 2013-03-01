@@ -33,6 +33,10 @@ class Adler32
     nil
   end
 
+  def <<(content)
+    update(content)
+  end
+
   def digest
     @B * 65536 + @A
   end
