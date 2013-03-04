@@ -29,7 +29,7 @@ class SplitAndWriteChunks
       buffer_sha_candidates = @adlers[ buffer_adler_digest ]
       #is there is already a chunk with the same adler?
       if buffer_sha_candidates
-        puts buffer_sha_candidates
+        #puts buffer_sha_candidates
         #there is one, compare sha then
         buffer_sha_digest = buffer_sha.hexdigest buffer
         if buffer_sha_candidates.member? buffer_sha_digest
@@ -72,8 +72,6 @@ private
   end
 end
 
-
-
 def open_writer
   ioservice = FileIOService.new
   ioservice.lock do
@@ -84,7 +82,17 @@ def open_writer
   end
 end
 
-open_writer do |writer| 
-  puts writer.save_file( ARGF ) 
+def save(files)
+  open_writer do |writer|
+    files.each do |filename|
+      File.open(filename, 'r') do |file|
+        print 'Storing ', filename, "..."
+        sha = writer.save_file(file)
+        print " done, sha=#{sha}\n"
+      end
+    end
+  end
 end
+
+save ARGV
 
