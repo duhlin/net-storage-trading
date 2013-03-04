@@ -36,17 +36,18 @@ class SplitAndWriteChunks
           #sha find too! do not create a new one
           #sha has been found, there should be a chunk with this name
           fail if not @io.exists? :chunk, buffer_sha_digest
-          handle_chunk( buffer )
+          handle_chunk( buffer, rolling_adler.hexdigest )
           buffer = ''
           rolling_adler = Adler32.new(ChunkSize)
         end
       elsif buffer.size == ChunkSize
-        handle_chunk( buffer )
+        handle_chunk( buffer, rolling_adler.hexdigest )
         buffer = ''
+        rolling_adler = Adler32.new(ChunkSize)
       end
     end
     if not buffer.empty?
-      handle_chunk( buffer )
+      handle_chunk( buffer, rolling_adler.hexdigest )
     end
     handle_file
     AdlerDB::save @adlers
@@ -57,16 +58,13 @@ private
     @io.write_elem( :file, @file_sha1.hexdigest, @content.join("\n")+"\n" )
   end
 
-  def handle_chunk( content )
+  def handle_chunk( content, adler_digest )
     @file_sha1 << content
     sha1 = Digest::SHA1.new
     digest = sha1.hexdigest( content )
     @content.push( digest )
     @io.write_elem( :chunk, digest, content )
 
-    adler = Adler32.new( ChunkSize )
-    adler << content
-    adler_digest = adler.hexdigest
     if @adlers.key? adler_digest
       @adlers[ adler_digest ] << digest
     else
