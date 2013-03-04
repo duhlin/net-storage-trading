@@ -3,7 +3,7 @@ require 'fileutils'
 StoreDir = 'store'
 Subdirs = {
  file: 'files',
- chunk: 'chunks'
+ chunk: 'chunks',
 }
 
 class FileIOService
@@ -25,6 +25,10 @@ class FileIOService
     end
   end
 
+  def lock_file
+    File.join( StoreDir, 'lock' )
+  end
+
   def write_elem(type, digest, content)
     dir = dirname(type, digest)
     #print 'write_elem', digest, 'in', dir
@@ -34,6 +38,14 @@ class FileIOService
     File.open( filename(type, digest), 'w' ) do |file|
       file.write(content)
     end
+  end
+
+  def lock
+    raise if File.exists? lock_file
+    f = File.open(lock_file, 'w')
+    f.close()
+    yield
+    File.delete lock_file
   end
 end
 

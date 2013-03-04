@@ -7,11 +7,11 @@ require_relative 'adler_storage'
 ChunkSize=1024*256
 
 class SplitAndWriteChunks
-  def initialize(ioservice)
+  def initialize(ioservice, adlers)
     #@file_sha1 = Digest::SHA1.new
     #@content = []
     @io = ioservice
-    @adlers = AdlerDB::load
+    @adlers = adlers
   end
 
   def save_file(file)
@@ -50,7 +50,6 @@ class SplitAndWriteChunks
       handle_chunk( buffer, rolling_adler.hexdigest )
     end
     handle_file
-    AdlerDB::save @adlers
     @file_sha1.hexdigest
   end
 private
@@ -63,7 +62,7 @@ private
     sha1 = Digest::SHA1.new
     digest = sha1.hexdigest( content )
     @content.push( digest )
-    @io.write_elem( :chunk, digest, content )
+    @io.write_elem( :chunk, digest, content ) if not @io.exists? :chunk, digest
 
     if @adlers.key? adler_digest
       @adlers[ adler_digest ] << digest
@@ -73,6 +72,19 @@ private
   end
 end
 
-s = SplitAndWriteChunks.new( FileIOService.new )
-puts s.save_file( ARGF ) 
+
+
+def open_writer
+  ioservice = FileIOService.new
+  ioservice.lock do
+    adlers = AdlerDB::load
+    w = SplitAndWriteChunks.new( ioservice, adlers )
+    yield w
+    AdlerDB::save adlers
+  end
+end
+
+open_writer do |writer| 
+  puts writer.save_file( ARGF ) 
+end
 
