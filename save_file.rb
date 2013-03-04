@@ -19,35 +19,30 @@ class SplitAndWriteChunks
     @file_sha1 = Digest::SHA1.new
     buffer = ''
     rolling_adler = Adler32.new(ChunkSize)
-    tail_sha = Digest::SHA1.new
+    buffer_sha = Digest::SHA1.new
 
     #iterate over file content
     file.each_byte do |byte|
       buffer << byte
-      head = buffer[0...-ChunkSize]
-      tail = buffer[-ChunkSize..-1] || buffer
       rolling_adler << byte
-      tail_adler_digest = rolling_adler.hexdigest
-      tail_sha_candidates = @adlers[ tail_adler_digest ]
+      buffer_adler_digest = rolling_adler.hexdigest
+      buffer_sha_candidates = @adlers[ buffer_adler_digest ]
       #is there is already a chunk with the same adler?
-      if tail_sha_candidates
-        puts tail_sha_candidates
+      if buffer_sha_candidates
+        puts buffer_sha_candidates
         #there is one, compare sha then
-        tail_sha_digest = tail_sha.hexdigest tail
-        if tail_sha_candidates.member? tail_sha_digest
+        buffer_sha_digest = buffer_sha.hexdigest buffer
+        if buffer_sha_candidates.member? buffer_sha_digest
           #sha find too! do not create a new one
           #sha has been found, there should be a chunk with this name
-          fail if not @io.exists? :chunk, tail_sha_digest
-          if not head.empty?
-            handle_chunk( head )
-          end
-          handle_chunk( tail )
+          fail if not @io.exists? :chunk, buffer_sha_digest
+          handle_chunk( buffer )
           buffer = ''
           rolling_adler = Adler32.new(ChunkSize)
         end
-      elsif head.size == ChunkSize
-        handle_chunk( head )
-        buffer = tail
+      elsif buffer.size == ChunkSize
+        handle_chunk( buffer )
+        buffer = ''
       end
     end
     if not buffer.empty?
