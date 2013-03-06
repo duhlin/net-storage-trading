@@ -4,6 +4,7 @@ StoreDir = 'store'
 Subdirs = {
  file: 'files',
  chunk: 'chunks',
+ dir: 'dir',
 }
 
 class FileIOService
@@ -29,6 +30,14 @@ class FileIOService
     File.join( StoreDir, 'lock' )
   end
 
+  def create_lock
+    if not Dir.exists? StoreDir 
+      FileUtils.mkdir_p StoreDir
+    end
+    f = File.open(lock_file, 'w')
+    f.close()
+  end
+
   def write_elem(type, digest, content)
     dir = dirname(type, digest)
     #print 'write_elem', digest, 'in', dir
@@ -42,8 +51,7 @@ class FileIOService
 
   def lock
     raise if File.exists? lock_file
-    f = File.open(lock_file, 'w')
-    f.close()
+    create_lock
     yield
     File.delete lock_file
   end

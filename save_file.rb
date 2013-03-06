@@ -7,6 +7,8 @@ require_relative 'adler_storage'
 ChunkSize=1024*256
 
 class SplitAndWriteChunks
+  attr_reader :io
+
   def initialize(ioservice, adlers)
     #@file_sha1 = Digest::SHA1.new
     #@content = []
@@ -82,15 +84,40 @@ def open_writer
   end
 end
 
+def save_file(writer, filename)
+  File.open(filename, 'r') do |file|
+     print 'Storing file: ', filename, "..."
+     sha = writer.save_file(file)
+     print " done, sha=#{sha}\n"
+     sha
+   end
+end
+
+def save_element(writer, name)
+  if File.file? name
+    save_file( writer, name )
+  elsif File.directory? name
+    save_dir( writer, name )
+  else
+    raise
+  end
+end
+
+def save_dir(writer, dirname)
+  content = []
+  print 'Storing directory: ', dirname, "...\n"
+  Dir.foreach(dirname).sort.each do |filename|
+    content << save_element(writer, File.join(dirname, filename)) if filename != '.' and filename != '..'
+  end
+  sha = Digest::SHA1.new
+  digest = sha.hexdigest( content.to_s )
+  writer.io.write_elem( :dir, digest, content.join("\n")+"\n" )
+  print dirname, " done sha=#{digest}\n"
+end
+
 def save(files)
   open_writer do |writer|
-    files.each do |filename|
-      File.open(filename, 'r') do |file|
-        print 'Storing ', filename, "..."
-        sha = writer.save_file(file)
-        print " done, sha=#{sha}\n"
-      end
-    end
+    files.each {|filename| save_element(writer, filename)}
   end
 end
 
