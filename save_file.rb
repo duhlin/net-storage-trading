@@ -107,7 +107,11 @@ def save_dir(writer, dirname)
   content = []
   print 'Storing directory: ', dirname, "...\n"
   Dir.foreach(dirname).sort.each do |filename|
-    content << save_element(writer, File.join(dirname, filename)) if filename != '.' and filename != '..'
+    if filename != '.' and filename != '..'
+      path = File.join(dirname, filename)
+      s = File.stat(path)
+      content << [s.mode, save_element(writer, File.join(dirname, filename)), filename].join(' ')
+    end
   end
   sha = Digest::SHA1.new
   digest = sha.hexdigest( content.to_s )
