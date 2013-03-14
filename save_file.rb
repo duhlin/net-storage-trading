@@ -110,13 +110,18 @@ def save_dir(writer, dirname)
     if filename != '.' and filename != '..'
       path = File.join(dirname, filename)
       s = File.stat(path)
-      content << [s.mode, save_element(writer, File.join(dirname, filename)), filename].join(' ')
+      content << [ if s.directory? then 1 else 0 end,
+                   s.mode.to_s(8)[-3..-1], 
+                   save_element(writer, File.join(dirname, filename)),
+                   filename
+                 ].join(' ')
     end
   end
   sha = Digest::SHA1.new
   digest = sha.hexdigest( content.to_s )
   writer.io.write_elem( :dir, digest, content.join("\n")+"\n" )
   print dirname, " done sha=#{digest}\n"
+  digest
 end
 
 def save(files)
