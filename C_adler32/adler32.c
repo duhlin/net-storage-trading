@@ -39,7 +39,7 @@ void Adler32_newByte(Adler32* self, ElemType added)
       DECR_MOD_ADLER(self->B, 1 + self->buffer.size * removed)
     }
     // add new element to buffer
-    CircularBuffer_write( &(self->buffer), &added );
+    CircularBuffer_write( &(self->buffer), added );
   }
   self->A += added;
   self->B += self->A;

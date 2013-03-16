@@ -29,8 +29,8 @@ static ElemType CircularBuffer_head(CircularBuffer *cb) {
   return cb->elems[cb->start];
 }
  
-void CircularBuffer_write(CircularBuffer *cb, ElemType *elem);
-void CircularBuffer_read(CircularBuffer *cb, ElemType *elem);
+void CircularBuffer_write(CircularBuffer *cb, ElemType elem);
+ElemType CircularBuffer_read(CircularBuffer *cb);
 
 #endif //__CIRCULAR_BUFFER_H___
 
