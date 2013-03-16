@@ -1,7 +1,7 @@
 require 'openssl'
 require 'set'
 require_relative 'ioservice'
-require_relative 'adler32'
+require_relative 'C_adler32/adler32'
 require_relative 'adler_storage'
 
 ChunkSize=1024*256
@@ -26,8 +26,8 @@ class SplitAndWriteChunks
     #iterate over file content
     file.each_byte do |byte|
       buffer << byte
-      rolling_adler << byte
-      buffer_adler_digest = rolling_adler.hexdigest
+      rolling_adler.newByte( byte )
+      buffer_adler_digest = rolling_adler.digest.to_s(16)
       buffer_sha_candidates = @adlers[ buffer_adler_digest ]
       #is there is already a chunk with the same adler?
       if buffer_sha_candidates
@@ -38,18 +38,18 @@ class SplitAndWriteChunks
           #sha find too! do not create a new one
           #sha has been found, there should be a chunk with this name
           fail if not @io.exists? :chunk, buffer_sha_digest
-          handle_chunk( buffer, rolling_adler.hexdigest )
+          handle_chunk( buffer, rolling_adler.digest.to_s(16) )
           buffer = ''
           rolling_adler = Adler32.new(ChunkSize)
         end
       elsif buffer.size == ChunkSize
-        handle_chunk( buffer, rolling_adler.hexdigest )
+        handle_chunk( buffer, rolling_adler.digest.to_s(16) )
         buffer = ''
         rolling_adler = Adler32.new(ChunkSize)
       end
     end
     if not buffer.empty?
-      handle_chunk( buffer, rolling_adler.hexdigest )
+      handle_chunk( buffer, rolling_adler.digest.to_s(16) )
     end
     handle_file
     @file_sha1.hexdigest

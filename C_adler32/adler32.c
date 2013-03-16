@@ -45,7 +45,7 @@ void Adler32_newByte(Adler32* self, ElemType added)
   self->B += self->A;
   APPLY_MOD_ADLER( self->A )
   APPLY_MOD_ADLER( self->B )
-  printf("%d - %ld - %ld\n", added, self->A, self->B);
+  //printf("%d - %ld - %ld\n", added, self->A, self->B);
 }
 
 void Adler32_update(Adler32* self, const ElemType* buffer)
