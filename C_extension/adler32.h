@@ -1,18 +1,9 @@
 #ifndef __ADLER32_H__
 #define __ADLER32_H__
 
-typedef unsigned char ElemType;
+#include "circular_buffer.h"
+#include "typedef.h"
 
-/** Circular buffer object */
-typedef struct {
-  size_t    size;   /** maximum number of elements           */
-  size_t    start;  /** index of oldest element              */
-  size_t    end;    /** index at which to write new element  */
-  int       s_msb;
-  int       e_msb;
-  ElemType *elems;  /** vector of elements                   */
-} CircularBuffer;
- 
 typedef struct {
   CircularBuffer buffer; /**< required when size is provided */
   long unsigned A, B; /** Adler indicators */
