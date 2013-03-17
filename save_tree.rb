@@ -4,28 +4,30 @@ require_relative 'ioservice'
 require_relative 'C_adler32/adler32'
 require_relative 'adler_storage'
 
-ChunkSize=1024*256
 
 class SplitAndWriteChunks
   attr_reader :io
 
-  def initialize(ioservice, adlers)
+  def initialize(ioservice, adlers, chunksize = 1024*256)
     #@file_sha1 = Digest::SHA1.new
     #@content = []
     @io = ioservice
     @adlers = adlers
+    @ChunkSize= chunksize
   end
 
   def save_file(file)
     @content = []
     @file_sha1 = Digest::SHA1.new
     buffer = ''
-    rolling_adler = Adler32.new(ChunkSize)
+    buffer_len = 0
+    rolling_adler = Adler32.new(@ChunkSize)
     buffer_sha = Digest::SHA1.new
 
     #iterate over file content
     file.each_byte do |byte|
       buffer << byte
+      buffer_len += 1
       rolling_adler.newByte( byte )
       buffer_adler_digest = rolling_adler.digest.to_s(16)
       buffer_sha_candidates = @adlers[ buffer_adler_digest ]
@@ -40,12 +42,14 @@ class SplitAndWriteChunks
           fail if not @io.exists? :chunk, buffer_sha_digest
           handle_chunk( buffer, rolling_adler.digest.to_s(16) )
           buffer = ''
-          rolling_adler = Adler32.new(ChunkSize)
+          buffer_len = 0
+          rolling_adler = Adler32.new(@ChunkSize)
         end
-      elsif buffer.size == ChunkSize
+      elsif buffer_len == @ChunkSize
         handle_chunk( buffer, rolling_adler.digest.to_s(16) )
         buffer = ''
-        rolling_adler = Adler32.new(ChunkSize)
+        buffer_len = 0
+        rolling_adler = Adler32.new(@ChunkSize)
       end
     end
     if not buffer.empty?

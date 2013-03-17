@@ -238,6 +238,6 @@ $(OBJS): $(HDRS) $(ruby_headers)
 test_circular_buffer: circular_buffer.c circular_buffer.h
 	$(CC) -DUT circular_buffer.c -o test_circular_buffer
 
-run_tests: test_circular_buffer
+run_tests: test_circular_buffer $(DLLIB)
 	$(RUBY) adler32_test.rb
 	./test_circular_buffer
