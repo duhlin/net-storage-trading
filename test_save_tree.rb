@@ -15,6 +15,7 @@ class TestIOService
   end
 
   def write_elem(type, sha, content)
+    #puts content if type == :chunk
     @store[ type ] = Hash.new if not @store.has_key? type
     raise if @store[ type ].has_key? sha
     @store[ type ][ sha ] = content
@@ -38,6 +39,14 @@ def ComputeAdlerDigest(s)
   a.digest.to_s(16)
 end
 
+def CheckChunks(adlers, list)
+  list.each do |chunk|
+    adler = ComputeAdlerDigest chunk
+    assert( (adlers.has_key? adler), "#{chunk}: #{adler} not found in #{adlers}" )
+    assert( adlers[adler].member? ComputeSHADigest chunk )
+  end 
+end
+
 class Test_save_tree < Test::Unit::TestCase
   def setup
     @chunkSize = 5
@@ -55,7 +64,7 @@ class Test_save_tree < Test::Unit::TestCase
     #emulate the saving of a file whose content is 'test content'
     @writer.save_file('test content')
     #we expect three chunks for
-    expected_chunks = ['test ', 'conte', 'nt']
+    expected_chunks = ['test ', 'co', 'ntent']
     expected_chunks_sha = expected_chunks.map{|s| ComputeSHADigest s}
     #A. Each of the chunk is named with the sha on its content
     expected_chunks_sha.each{|sha| assert( @ioservice.exists? :chunk, sha )}
@@ -68,20 +77,42 @@ class Test_save_tree < Test::Unit::TestCase
       c.each_line.zip(expected_chunks_sha).each{ |l, sha| assert_equal(l.strip, sha) }
     end
     #D. the adlers directory should be filled with the adler32 code of each chunk
-    expected_chunks.zip(expected_chunks_sha).each do |chunk,sha|
-      assert( @adlers[ComputeAdlerDigest chunk].member? sha )
-    end
-  end
-
-  #check that a simple tree can be stored and retrieved
-  def test_store_tree
+    CheckChunks( @adlers, expected_chunks )
   end
 
   #check that a same file is not stored twice
   def test_no_duplicated_file
+    #emulate the saving of a file whose content is 'test content'
+    @writer.save_file('test content')
+    #an exception should be raised by ioservice if file is attempted to be saved twice
+    assert_nothing_thrown do
+      @writer.save_file('test content')
+    end
   end
 
-  #when a file has been stored, if we add 
+  #When something is added at the end, all the existing chunks are reused
+  def test_reuse_existing_chunks_when_append
+    @writer.save_file('test content') 
+    CheckChunks @adlers, ['test ', 'co', 'ntent']
+    @writer.save_file('test content updated') 
+    CheckChunks @adlers, ['test ', 'co', 'ntent', ' up', 'dated']
+  end
+  
+  #when something is added at the beginning, all the existing chunks are reused
+  def test_reuse_existing_chunks_when_prepend
+    @writer.save_file('test content') 
+    CheckChunks @adlers, ['test ', 'co', 'ntent']
+    @writer.save_file('a new test content') 
+    CheckChunks @adlers, ['a new', ' ', 'test ', 'co', 'ntent'] 
+  end
+
+  #when something is inserted in the middle, all full chunks (with size @ChunkSize) are reused
+  def test_reuse_existing_chunks_when_inserted
+    @writer.save_file('test with some content') 
+    CheckChunks @adlers, ['test ', 'with ', 'some ', 'co', 'ntent']
+    @writer.save_file('test without any content') 
+    CheckChunks @adlers, ['test ', 'witho', 'ut an', 'y co', 'ntent']
+  end
 end
 
 
