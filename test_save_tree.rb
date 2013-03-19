@@ -21,15 +21,15 @@ class TestIOService
     @store[ type ][ sha ] = content
   end
 
-  def read_elem(type, sha, &block)
+  def read_elem(type, sha)
     raise if not exists? type, sha
-    yield @store[ type ][sha ]
+    yield @store[ type ][ sha ]
   end
 end
 
 def ComputeSHADigest(s)
   sha = Digest::SHA1.new
-  sha << s
+  sha << s.each_byte.to_a.pack('C*')
   sha.hexdigest
 end
 
@@ -39,12 +39,24 @@ def ComputeAdlerDigest(s)
   a.digest.to_s(16)
 end
 
-def CheckChunks(adlers, list)
+def CheckChunksInAdlerDirectory(adlers, list)
   list.each do |chunk|
     adler = ComputeAdlerDigest chunk
     assert( (adlers.has_key? adler), "#{chunk}: #{adler} not found in #{adlers}" )
     assert( adlers[adler].member? ComputeSHADigest chunk )
   end 
+end
+
+def CheckFileChunks(io, sha, chunks)
+  io.read_elem(:file, sha) do |file|
+    assert_equal( chunks.map{|e| ComputeSHADigest e}, file.each_line.map{|l| l.strip} )
+  end
+end
+
+def CheckFile(writer, io, adlers, content, chunks)
+    sha = writer.save_file( content ) 
+    CheckFileChunks io, sha, chunks
+    CheckChunksInAdlerDirectory adlers, chunks
 end
 
 class Test_save_tree < Test::Unit::TestCase
@@ -64,20 +76,20 @@ class Test_save_tree < Test::Unit::TestCase
     #emulate the saving of a file whose content is 'test content'
     @writer.save_file('test content')
     #we expect three chunks for
-    expected_chunks = ['test ', 'co', 'ntent']
+    expected_chunks = ['test ', 'conte', 'nt']
     expected_chunks_sha = expected_chunks.map{|s| ComputeSHADigest s}
     #A. Each of the chunk is named with the sha on its content
     expected_chunks_sha.each{|sha| assert( @ioservice.exists? :chunk, sha )}
     
     #B. The filename is retrieved from the sha of the whole string
     file_sha = ComputeSHADigest 'test content'
-    assert( @ioservice.exists? :file, file_sha )
+    assert( @ioservice.exists?(:file, file_sha), "file not found: #{file_sha} in #{@ioservice.store[:file]}" )
     #C. The file lists all its chunks
     @ioservice.read_elem(:file, file_sha) do |c|
       c.each_line.zip(expected_chunks_sha).each{ |l, sha| assert_equal(l.strip, sha) }
     end
     #D. the adlers directory should be filled with the adler32 code of each chunk
-    CheckChunks( @adlers, expected_chunks )
+    CheckChunksInAdlerDirectory( @adlers, expected_chunks )
   end
 
   #check that a same file is not stored twice
@@ -90,29 +102,38 @@ class Test_save_tree < Test::Unit::TestCase
     end
   end
 
-  #When something is added at the end, all the existing chunks are reused
+  #When something is added at the end, all the full existing chunks are reused
   def test_reuse_existing_chunks_when_append
-    @writer.save_file('test content') 
-    CheckChunks @adlers, ['test ', 'co', 'ntent']
-    @writer.save_file('test content updated') 
-    CheckChunks @adlers, ['test ', 'co', 'ntent', ' up', 'dated']
+    CheckFile @writer, @ioservice, @adlers, 'test content', ['test ', 'conte', 'nt']
+    CheckFile @writer, @ioservice, @adlers, 'test content updated', ['test ', 'conte', 'nt', ' upda', 'ted']
   end
   
-  #when something is added at the beginning, all the existing chunks are reused
+  #when something is added at the beginning, all the full existing chunks are reused
   def test_reuse_existing_chunks_when_prepend
-    @writer.save_file('test content') 
-    CheckChunks @adlers, ['test ', 'co', 'ntent']
-    @writer.save_file('a new test content') 
-    CheckChunks @adlers, ['a new', ' ', 'test ', 'co', 'ntent'] 
+    CheckFile @writer, @ioservice, @adlers, 'test content', ['test ', 'conte', 'nt']
+    CheckFile @writer, @ioservice, @adlers, 'a new test content', ['a new', ' ', 'test ', 'conte', 'nt']
   end
 
   #when something is inserted in the middle, all full chunks (with size @ChunkSize) are reused
   def test_reuse_existing_chunks_when_inserted
-    @writer.save_file('test with some content') 
-    CheckChunks @adlers, ['test ', 'with ', 'some ', 'co', 'ntent']
-    @writer.save_file('test without any content') 
-    CheckChunks @adlers, ['test ', 'witho', 'ut an', 'y co', 'ntent']
+    CheckFile @writer, @ioservice, @adlers, 'test content', ['test ', 'conte', 'nt']
+    CheckFile @writer, @ioservice, @adlers, 'test with a content', ['test ', 'with ', 'a ', 'conte', 'nt']
   end
+
+  #test save with funny char
+  def test_exotic_char
+    CheckFile @writer, @ioservice, @adlers, 
+      "J'espère que ça va marcher", 
+      "J'espère que ça va marcher".bytes.each_slice(@chunkSize).to_a.map{|a| a.pack('C*')} 
+  end
+
+  #When a tree is saved:
+  #A. the tree file is named with the sha of its content
+  #B. the tree file stores the list of the file in it
+  #C. each file is normaly saved
+  def test_save_tree
+  end
+
 end
 
 

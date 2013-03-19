@@ -20,7 +20,7 @@ class FileIOService
     File.exists? filename( type, sha )
   end
 
-  def read_elem(type, digest, &block)
+  def read_elem(type, digest)
     File.open( filename(type, digest), 'r' ) do |file|
       yield file
     end

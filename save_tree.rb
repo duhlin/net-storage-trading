@@ -8,8 +8,6 @@ class SplitAndWriteChunks
   attr_reader :io
 
   def initialize(ioservice, adlers, chunksize = 1024*256)
-    #@file_sha1 = Digest::SHA1.new
-    #@content = []
     @io = ioservice
     @adlers = adlers
     @ChunkSize= chunksize
@@ -18,46 +16,44 @@ class SplitAndWriteChunks
   def save_file(file)
     @content = []
     @file_sha1 = Digest::SHA1.new
-    buffer = ''
-    buffer_len = 0
+    buffer = []
     rolling_adler = Adler32.new(@ChunkSize)
     rolling_adler_digest = ''
     buffer_sha = Digest::SHA1.new
 
     #iterate over file content
     file.each_byte do |byte|
-      buffer << byte
-      buffer_len += 1
+      buffer.push byte
       rolling_adler.newByte( byte )
       rolling_adler_digest = rolling_adler.digest.to_s(16)
       buffer_sha_candidates = @adlers[ rolling_adler_digest ]
       #is there is already a chunk with the same adler?
       if buffer_sha_candidates
         #there is one, compare sha then
-        buffer_sha_digest = buffer_sha.hexdigest (buffer[-@ChunkSize..-1] or buffer)
+        buffer_sha_digest = buffer_sha.hexdigest buffer.last(@ChunkSize).pack('C*')
         if buffer_sha_candidates.member? buffer_sha_digest
           #sha find too! do not create a new one
           #sha has been found, there should be a chunk with this name
           fail if not @io.exists? :chunk, buffer_sha_digest
-          split_and_handle_chunk( buffer, buffer_len, rolling_adler_digest )
-          buffer = ''
-          buffer_len = 0
+          #puts "recognized end of '#{buffer.pack('C*')}'"
+          handle_chunk( buffer.shift(buffer.size-@ChunkSize), nil ) if buffer.size > @ChunkSize
+          handle_chunk( buffer, rolling_adler_digest ) 
+          buffer.clear
           rolling_adler = Adler32.new(@ChunkSize)
         end
-      elsif buffer_len == 2*@ChunkSize
-        handle_chunk( buffer[0...@ChunkSize], nil )
-        buffer = buffer[-@ChunkSize..-1]
-        buffer_len = @ChunkSize
+      elsif buffer.size == 2*@ChunkSize
+        handle_chunk( (buffer.shift @ChunkSize), nil ) #remove the first @ChunkSize bytes and create a chunk with it
       end
     end
-    if not buffer.empty?
-      split_and_handle_chunk( buffer, buffer_len, rolling_adler_digest )
-    end
+    #insert remaining if any
+    handle_chunk( buffer.shift(@ChunkSize), nil ) if not buffer.empty?
+    handle_chunk( buffer, nil) if not buffer.empty? 
     handle_file
     @file_sha1.hexdigest
   end
 private
   def handle_file
+    #puts "handle_file, #{@file_sha1.hexdigest}"
     if not @io.exists? :file, @file_sha1.hexdigest
       @io.write_elem( :file, @file_sha1.hexdigest, @content.join("\n")+"\n" )
     end
@@ -69,16 +65,9 @@ private
     adler.digest.to_s(16)
   end
 
-  def split_and_handle_chunk( content, size, last_adler_digest )
-    if size > @ChunkSize
-      handle_chunk( content[0...size-@ChunkSize], nil)
-      handle_chunk( content[-@ChunkSize..-1], last_adler_digest )
-    else
-      handle_chunk( content, last_adler_digest )
-    end
-  end
-
   def handle_chunk( content, adler_digest )
+    content = content.pack('C*')
+    #puts "handle_chunk: '#{content}', #{adler_digest}"
     adler_digest = ComputeAdlerDigest content if not adler_digest
     @file_sha1 << content
     sha1 = Digest::SHA1.new
@@ -138,8 +127,9 @@ def save_dir(writer, dirname)
     end
   end
   sha = Digest::SHA1.new
-  digest = sha.hexdigest( content.to_s )
-  writer.io.write_elem( :dir, digest, content.join("\n")+"\n" )
+  content_str = content.join("\n")+"\n"
+  digest = sha.hexdigest( content_str )
+  writer.io.write_elem( :dir, digest, content_str )
   print dirname, " done sha=#{digest}\n"
   digest
 end
