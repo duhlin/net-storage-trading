@@ -106,39 +106,41 @@ def save_element(writer, name)
   if File.file? name
     save_file( writer, name )
   elsif File.directory? name
-    save_dir( writer, name )
+    save_tree( writer, name, writer.io.dir_with_stats(name) )
   else
     raise
   end
 end
 
-def save_dir(writer, dirname)
+def save_tree(writer, dirname, subfiles)
   content = []
   print 'Storing directory: ', dirname, "...\n"
-  Dir.foreach(dirname).sort.each do |filename|
-    if filename != '.' and filename != '..'
-      path = File.join(dirname, filename)
-      s = File.stat(path)
-      content << [ if s.directory? then 1 else 0 end,
-                   s.mode.to_s(8)[-3..-1], 
-                   save_element(writer, File.join(dirname, filename)),
-                   filename
-                 ].join(' ')
-    end
+  subfiles.each do |stats|
+    filename = stats[ :filename ]
+    content << [ if stats[ :directory? ] then 1 else 0 end,
+                 stats[ :mode ], 
+                 save_element( writer, File.join(dirname, filename) ),
+                 filename
+               ].join(' ')
   end
   sha = Digest::SHA1.new
   content_str = content.join("\n")+"\n"
   digest = sha.hexdigest( content_str )
-  writer.io.write_elem( :dir, digest, content_str )
+  writer.io.write_elem( :tree, digest, content_str )
   print dirname, " done sha=#{digest}\n"
   digest
 end
 
-def save(files)
+def save_root(files)
   open_writer do |writer|
-    files.each {|filename| save_element(writer, filename)}
+    files.each do |path| 
+      dirname = File.dirname(path)
+      filename = File.basename(path)
+      digest = save_tree( writer, dirname, [writer.io.get_stats(dirname, filename)] )
+      writer.io.declare_root( digest )
+    end
   end
 end
 
-save ARGV
+save_root ARGV
 

@@ -28,12 +28,12 @@ def file_foreach(io, sha, step)
 end
 
 
-def dir_foreach(io, sha)
+def tree_foreach(io, sha)
   #go through each tree entry and check the names
-  io.read_elem(:dir, sha) do |dir_file|
+  io.read_elem(:tree, sha) do |tree_file|
     sha_control = Digest::SHA1.new
-    r = Regexp.new '(?<is_directory>\d) (?<mode>\d{3}) (?<sha>\h{40}) (?<filename>.*)'
-    dir_file.each_line do |line|
+    r = Regexp.new '(?<is_directory?>\d) (?<mode>\d{3}) (?<sha>\h{40}) (?<filename>.*)'
+    tree_file.each_line do |line|
       l = r.match(line)
       yield l if l
       sha_control << line 
@@ -42,3 +42,6 @@ def dir_foreach(io, sha)
   end
 end
 
+def root_foreach(io, &block)
+  io.list_elem(:root, &block)
+end
