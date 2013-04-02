@@ -11,6 +11,26 @@ def chunk_foreach(io, sha, step)
   end
 end
 
+def file_foreach_chunk(io, sha)
+  io.read_elem(:file, sha) do |file|
+    file.each_line do |chunk_sha|
+      chunk_sha = chunk_sha.strip
+      yield chunk_sha if not chunk_sha.empty?
+    end
+  end
+end
+
+def file_foreach(io, sha, step)
+  sha_control = Digest::SHA1.new
+  file_foreach_chunk(io, sha) do |chunk_sha|
+    chunk_foreach(io, chunk_sha, step) do |buf| 
+      yield buf
+      sha_control << buf
+    end
+  end
+  raise if sha_control.hexdigest != sha
+end
+
 def file_foreach(io, sha, step)
   io.read_elem(:file, sha) do |file|
     sha_control = Digest::SHA1.new
