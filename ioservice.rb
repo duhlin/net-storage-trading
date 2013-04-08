@@ -1,4 +1,6 @@
 require 'fileutils'
+require 'openssl'
+require 'zlib'
 
 StoreDir = 'store'
 Subdirs = {
@@ -11,6 +13,11 @@ Subdirs = {
 LockFile = 'lock'
 
 class FileIOService
+  def initialize
+    @encrypter = nil
+    @zipper = nil
+  end
+
   def dirname(type, sha1)
     File.join( StoreDir, Subdirs[type], sha1[0...2] )
   end
@@ -45,13 +52,7 @@ class FileIOService
     DirWithStats.new(self, dirname)
   end
 
-  def read_elem(type, digest)
-    File.open( filename(type, digest), 'r' ) do |file|
-      yield file
-    end
-  end
-
-  def lock_file
+ def lock_file
     File.join( StoreDir, LockFile )
   end
 
@@ -72,7 +73,26 @@ class FileIOService
     File.open( filename(type, digest), 'w', &block ) 
   end
 
+  def setup_encryption(key, iv)
+    @encrypter = Encrypter.new(key, iv)
+  end
+
+  def setup_zip
+    @zipper = Zipper.new
+  end
+
+  def read_elem(type, digest)
+    File.open( filename(type, digest), 'r' ) do |file|
+      content = file.read
+      content = @encrypter.decrypt( content ) if @encrypter
+      content = @zipper.unzip( content ) if @zipper
+      yield content
+    end
+  end
+
   def write_elem(type, digest, content)
+    content = @zipper.zip( content ) if @zipper
+    content = @encrypter.encrypt( content ) if @encrypter
     create_elem(type, digest) {|f| f.write(content)}
   end
 
@@ -94,6 +114,39 @@ class FileIOService
     File.delete lock_file
   end
 end
+
+class Zipper
+  def zip(content)
+    Zlib::Deflate.deflate( content )
+  end
+
+  def unzip(content)
+    Zlib::Inflate.inflate( content )
+  end
+end
+
+class Encrypter
+  def initialize(key, iv)
+    @cipher = OpenSSL::Cipher::AES.new(128, :CBC)
+    @cipher.encrypt
+    @cipher.key = key
+    @cipher.iv = iv
+
+    @decipher = OpenSSL::Cipher::AES.new(128, :CBC)
+    @decipher.decrypt
+    @decipher.key = key
+    @decipher.iv = iv
+  end
+
+  def encrypt(content)
+    @cipher.update( content ) + @cipher.final
+  end
+
+  def decrypt(content)
+    @decipher.update( content ) + @decipher.final 
+  end
+end
+
 
 class DirWithStats
   def initialize(ioservice, dirname)
