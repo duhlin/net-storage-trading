@@ -1,13 +1,14 @@
 require 'openssl'
 require 'set'
 require_relative 'ioservice'
+require_relative 'gen_keys'
 require_relative 'C_adler32/adler32'
 require_relative 'adler_storage'
 
 class SplitAndWriteChunks
   attr_reader :io
 
-  def initialize(ioservice, adlers, chunksize = 1024*256)
+  def initialize(ioservice, adlers, chunksize = 1024*512)
     @io = ioservice
     @adlers = adlers
     @ChunkSize= chunksize
@@ -84,7 +85,7 @@ private
 end
 
 def open_writer
-  ioservice = FileIOService.new
+  ioservice = FileIOService.create( GetKeys() )
   ioservice.lock do
     adlers = AdlerDB::load
     w = SplitAndWriteChunks.new( ioservice, adlers )

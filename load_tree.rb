@@ -1,5 +1,6 @@
 require 'openssl'
 require 'fileutils'
+require_relative 'gen_keys'
 require_relative 'ioservice'
 require_relative 'reader'
 
@@ -30,5 +31,5 @@ end
 sha = ARGV[0]
 outdir = ARGV[1]
 
-io = FileIOService.new
+io = FileIOService.create( GetKeys() )
 io.lock{ load_tree(io, sha, outdir) }

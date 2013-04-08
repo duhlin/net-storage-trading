@@ -13,6 +13,12 @@ Subdirs = {
 LockFile = 'lock'
 
 class FileIOService
+  def self.create(keys=nil, zlib=true)
+    io = FileIOService.new
+    io.setup_encryption(keys['key'], keys['iv']) if keys
+    io.setup_zip if zlib
+    io
+  end
   def initialize
     @encrypter = nil
     @zipper = nil
@@ -84,15 +90,15 @@ class FileIOService
   def read_elem(type, digest)
     File.open( filename(type, digest), 'r' ) do |file|
       content = file.read
-      content = @encrypter.decrypt( content ) if @encrypter
-      content = @zipper.unzip( content ) if @zipper
+      content = @encrypter.decrypt( content ) if @encrypter and content
+      content = @zipper.unzip( content ) if @zipper and content
       yield content
     end
   end
 
   def write_elem(type, digest, content)
-    content = @zipper.zip( content ) if @zipper
-    content = @encrypter.encrypt( content ) if @encrypter
+    content = @zipper.zip( content ) if @zipper and content
+    content = @encrypter.encrypt( content ) if @encrypter and content
     create_elem(type, digest) {|f| f.write(content)}
   end
 
@@ -127,23 +133,26 @@ end
 
 class Encrypter
   def initialize(key, iv)
+    @key = key
+    @iv = iv
     @cipher = OpenSSL::Cipher::AES.new(128, :CBC)
-    @cipher.encrypt
-    @cipher.key = key
-    @cipher.iv = iv
-
-    @decipher = OpenSSL::Cipher::AES.new(128, :CBC)
-    @decipher.decrypt
-    @decipher.key = key
-    @decipher.iv = iv
   end
 
+  def setup_cipher
+    @cipher.reset
+    yield @cipher
+    @cipher.key = @key
+    @cipher.iv = @iv
+  end 
+ 
   def encrypt(content)
+    setup_cipher{|c| c.encrypt}
     @cipher.update( content ) + @cipher.final
   end
 
   def decrypt(content)
-    @decipher.update( content ) + @decipher.final 
+    setup_cipher{|c| c.decrypt}
+    @cipher.update( content ) + @cipher.final 
   end
 end
 

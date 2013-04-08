@@ -3,10 +3,8 @@ require 'openssl'
 def chunk_foreach(io, sha, step)
   io.read_elem(:chunk, sha) do |chunk_file|
     sha_control = Digest::SHA1.new
-    chunk_file.each(step) do |buf|
-      yield buf
-      sha_control << buf
-    end
+    yield chunk_file
+    sha_control << chunk_file
     raise if sha_control.hexdigest != sha
   end
 end

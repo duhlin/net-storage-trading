@@ -19,6 +19,7 @@ class Test_ioservice < Test::Unit::TestCase
   #an element saved with write_elem can be read with read_elem
   def test
     CheckWriteAndRead(@io, 'test_id', 'test content')
+    CheckWriteAndRead(@io, 'test_id', 'test content a second time')
   end
 
   #ioservice uses Zlib to zip/unzip content.
@@ -26,6 +27,7 @@ class Test_ioservice < Test::Unit::TestCase
   def test_zip
     @io.setup_zip
     CheckWriteAndRead(@io, 'test_id', 'test content for zip')
+    CheckWriteAndRead(@io, 'test_id', 'test content for zip a second time')
   end
 
   #ioservice can encrypt content
@@ -36,6 +38,7 @@ class Test_ioservice < Test::Unit::TestCase
 
     @io.setup_encryption(g[:key], g[:iv])
     CheckWriteAndRead(@io, 'test_id', 'test content for encryption')
+    CheckWriteAndRead(@io, 'test_id', 'test content for encryption a second time')
   end
 
   #encryption and zip can be used at the same time
@@ -45,6 +48,7 @@ class Test_ioservice < Test::Unit::TestCase
     @io.setup_zip
 
     CheckWriteAndRead(@io, 'test_id', 'test content for zip and encryption')
+    CheckWriteAndRead(@io, 'test_id', 'test content for zip and encryption a second time')
   end
 end
 

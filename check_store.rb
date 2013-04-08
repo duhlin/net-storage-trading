@@ -1,5 +1,6 @@
 require_relative('reader')
 require_relative('ioservice')
+require_relative('gen_keys')
 
 class Index
   def initialize(io)
@@ -87,10 +88,16 @@ class Index
 end
 
 
-io = FileIOService.new
+io = FileIOService.create( GetKeys() )
 io.lock do
   index = Index.new(io)
   index.index_all
-  index.orphans.each{|type, orphans| print "#{type}\n#{orphans}\n\n"}
+  index.orphans.each do |type, orphans| 
+    if orphans.any?
+      print "Warning, Orphan found: #{type}\n#{orphans}\n\n"
+    else
+      print "Ok, no orphan found: #{type}\n"
+    end
+  end
 end
 

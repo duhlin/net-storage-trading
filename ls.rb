@@ -1,5 +1,6 @@
 require_relative('reader')
 require_relative('ioservice')
+require_relative('gen_keys')
 
 def print_elem(sha, filename)
   print "#{sha} #{filename}\n"
@@ -17,7 +18,7 @@ def ls_tree(io, sha, root = './')
   end
 end
 
-io = FileIOService.new
+io = FileIOService.create( GetKeys() )
 io.lock do
   root_foreach(io) { |sha| ls_tree(io, sha) }
 end

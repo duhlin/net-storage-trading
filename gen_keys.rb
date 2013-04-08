@@ -25,7 +25,3 @@ def GetKeys
     ReadPassFile()
   end
 end
-
-print GetKeys()
-
-

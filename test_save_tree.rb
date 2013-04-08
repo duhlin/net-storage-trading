@@ -127,6 +127,11 @@ class Test_save_tree < Test::Unit::TestCase
       "J'espère que ça va marcher".bytes.each_slice(@chunkSize).to_a.map{|a| a.pack('C*')} 
   end
 
+  #test that chunks are reused if possible in a single save
+  def test_reuse_single_file
+    CheckFile @writer, @ioservice, @adlers, 'test tests test ', ['test ', 'tests', ' ', 'test ']
+  end
+
   #When a tree is saved:
   #A. the tree file is named with the sha of its content
   #B. the tree file stores the list of the file in it
