@@ -132,6 +132,11 @@ class Test_save_tree < Test::Unit::TestCase
     CheckFile @writer, @ioservice, @adlers, 'test tests test ', ['test ', 'tests', ' ', 'test ']
   end
 
+  #test a more complicated case where chunks should be reused
+  def test_reuse_single_file2
+    CheckFile @writer, @ioservice, @adlers, 'try with try with', ['try w', 'ith ', 'try w', 'ith']
+  end
+
   #When a tree is saved:
   #A. the tree file is named with the sha of its content
   #B. the tree file stores the list of the file in it
