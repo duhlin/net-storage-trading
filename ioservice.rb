@@ -37,7 +37,9 @@ class FileIOService
   end
 
   def dir_list(dirname)
-    Dir.foreach(dirname).sort.each{|f| yield f if f != '.' and f != '..'}
+    if Dir.exists? dirname
+      Dir.foreach(dirname).sort.each{|f| yield f if f != '.' and f != '..'}
+    end
   end
 
   def get_stats(dirname, filename)
