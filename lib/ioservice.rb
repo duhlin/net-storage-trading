@@ -118,8 +118,11 @@ class FileIOService
   def lock
     raise if File.exists? lock_file
     create_lock
-    yield
-    File.delete lock_file
+    begin
+      yield
+    ensure
+      File.delete lock_file
+    end
   end
 end
 
