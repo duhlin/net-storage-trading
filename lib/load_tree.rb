@@ -1,8 +1,8 @@
 require 'openssl'
 require 'fileutils'
-require_relative 'gen_keys'
-require_relative 'ioservice'
-require_relative 'reader'
+require 'gen_keys'
+require 'ioservice'
+require 'reader'
 
 ReadSize=50
 

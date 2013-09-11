@@ -1,4 +1,4 @@
-require_relative 'ioservice'
+require 'ioservice'
 require 'test/unit'
 
 def CheckWriteAndRead(io, id, content)

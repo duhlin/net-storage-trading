@@ -1,9 +1,9 @@
 require 'openssl'
 require 'set'
-require_relative 'ioservice'
-require_relative 'gen_keys'
-require_relative 'C_adler32/adler32'
-require_relative 'adler_storage'
+require 'ioservice'
+require 'gen_keys'
+require 'adler32'
+require 'adler_storage'
 
 class SplitAndWriteChunks
   attr_reader :io

@@ -1,7 +1,7 @@
 require 'zlib'
 require 'test/unit'
 
-class Test_encryption < Test::Unit::TestCase
+class Test_zlib < Test::Unit::TestCase
   def setup
     @plain_text = "I don't really have anything to say.\nBut I want it to be kept secure\n"
     @deflate = Zlib::Deflate.new

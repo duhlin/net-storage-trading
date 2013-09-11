@@ -1,6 +1,6 @@
-require_relative('reader')
-require_relative('ioservice')
-require_relative('gen_keys')
+require 'reader'
+require 'ioservice'
+require 'gen_keys'
 
 def print_elem(sha, filename)
   print "#{sha} #{filename}\n"

@@ -1,4 +1,4 @@
-require_relative 'adler32'
+require 'adler32'
 require 'test/unit'
 
 class TestAdler32 < Test::Unit::TestCase

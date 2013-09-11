@@ -1,6 +1,6 @@
-require_relative('reader')
-require_relative('ioservice')
-require_relative('gen_keys')
+require 'reader'
+require 'ioservice'
+require 'gen_keys'
 
 class Index
   def initialize(io)

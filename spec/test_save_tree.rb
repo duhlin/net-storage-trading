@@ -1,6 +1,6 @@
-require_relative 'save_tree'
-require_relative 'ioservice'
-require_relative 'C_adler32/adler32'
+require 'save_tree'
+require 'ioservice'
+require 'adler32'
 require 'test/unit'
 require 'openssl'
 
