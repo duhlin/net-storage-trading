@@ -2,9 +2,12 @@ require 'rake/extensiontask'
 require 'rake/testtask'
 
 #:build
-Rake::ExtensionTask.new "adler32" do |t|
-  t.lib_dir = "lib"
+["adler32", "nst_server"].each do |m|
+  Rake::ExtensionTask.new( m ) do |t|
+    t.lib_dir = "lib"
+  end
 end
+
 
 #:test
 Rake::TestTask.new do |t|
