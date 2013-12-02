@@ -11,7 +11,7 @@ end
 
 #:test
 Rake::TestTask.new do |t|
-  t.test_files = Dir['spec/*.rb']
+  t.test_files = Dir['spec/**/*.rb']
 end
 
 desc "Run tests"
