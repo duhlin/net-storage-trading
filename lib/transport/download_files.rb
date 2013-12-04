@@ -4,6 +4,9 @@ require "fileutils"
 
 def download_file(stream, dir)
 	filename = stream.readline.strip
+	dirname = File.join( dir, File.dirname( filename ) )
+	Dir.mkdir( dirname ) unless Dir.exists? dirname
+
 	size = stream.readline.to_i
 	File.open(File.join(dir, filename), "w") do |f|
 		f << stream.read(size)

@@ -1,10 +1,14 @@
 #!/usr/bin/env ruby
 
+STDOUT.binmode
+
+repository = ARGV[0]
 STDIN.each do |filename|
-	content = File.read(filename.strip)
+	f = File.open( File.join(repository,filename.strip), "rb" )
+	content = f.read
 	STDOUT << filename
 	STDOUT << "#{content.size}\n"
-	STDOUT << content
+	STDOUT.write content
 	STDOUT << "\n"
 end
 

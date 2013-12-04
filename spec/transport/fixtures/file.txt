@@ -1,0 +1,9 @@
+a text file
+with
+multiple
+lines
+and
+some
+é @ è €
+funny
+symbols...
